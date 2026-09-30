@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobAround</title>
+</head>
+
+<body>
+  <p>Caricamento...</p>
+
+  <script type="module">
+    import { initializeApp } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getFirestore,
+      doc,
+      runTransaction
+    } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+    // =========================
+    // FIREBASE
+    // =========================
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3Z3N4Nqam-6Mmmqrw6NQvDCMG89i-3FE",
+    authDomain: "smistamento-28557.firebaseapp.com",
+    projectId: "smistamento-28557",
+    storageBucket: "smistamento-28557.firebasestorage.app",
+    messagingSenderId: "190870159742",
+    appId: "1:190870159742:web:a39fb8d5aa049e5f17332f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+
+    // =========================
+    // I TUOI 4 SITI
+    // =========================
+
+    const sites = [
+      "https://concimontera1.github.io/JANeutro/",
+      "https://concimontera1.github.io/JAconBanner/",
+      "https://concimontera1.github.io/JAconPopUp/",
+      "https://concimontera1.github.io/JAconPopeBanner/"
+    ];
+
+
+    // =========================
+    // RANDOMIZZAZIONE
+    // =========================
+
+    function shuffle(array) {
+      const a = [...array];
+
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+
+      return a;
+    }
+
+
+    async function assignParticipant() {
+
+      const counterRef = doc(
+        db,
+        "experiments",
+        "jobaround",
+        "config",
+        "assignmentCounter"
+      );
+
+      const result = await runTransaction(db, async (transaction) => {
+
+        const snapshot = await transaction.get(counterRef);
+
+        let data = snapshot.exists()
+          ? snapshot.data()
+          : { count: 0, order: [] };
+
+        let count = data.count || 0;
+        let order = data.order || [];
+
+
+        // Se non c'è un blocco disponibile,
+        // creo un nuovo ordine casuale dei 4 siti.
+        if (order.length === 0) {
+          order = shuffle([0, 1, 2, 3]);
+        }
+
+
+        // Prendo il prossimo sito
+        const siteIndex = order[0];
+
+        // Tolgo quel sito dal blocco
+        order = order.slice(1);
+
+        // Aggiorno il contatore
+        count++;
+
+
+        transaction.set(
+          counterRef,
+          {
+            count: count,
+            order: order
+          },
+          { merge: true }
+        );
+
+
+        return {
+          siteIndex: siteIndex,
+          count: count
+        };
+      });
+
+
+      // =========================
+      // REDIRECT
+      // =========================
+
+      window.location.replace(
+        sites[result.siteIndex]
+      );
+    }
+
+
+    assignParticipant().catch((error) => {
+
+      console.error("Errore:", error);
+
+      document.body.innerHTML = `
+        <h2>Si è verificato un errore.</h2>
+        <p>Ricarica la pagina.</p>
+      `;
+    });
+
+  </script>
+
+</body>
+</html>
